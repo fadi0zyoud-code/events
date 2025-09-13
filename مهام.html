@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>جدول أحداث - هل ذهبت؟</title>
+<style>
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; background: #f7f7fb; color: #111; }
+  h1 { text-align: center; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+  th, td { padding: 12px 10px; border-bottom: 1px solid #e6e6ef; text-align: center; font-size:16px; }
+  th { background: #f0f4ff; font-size: 16px; }
+  tr:hover td { background: #fcfcff; }
+  .radio-group { display: flex; gap: 15px; justify-content: center; align-items: center; font-size:24px; }
+  label.btn { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; cursor:pointer; user-select:none; border:1px solid #ccc; font-size:24px; }
+  input[type="radio"] { display:none; }
+  input[type="radio"]:checked + span { font-weight:700; color:white; }
+  .yes { background: #e6fff1; border:1px solid #b7f0d3; }
+  .yes input:checked + span { background:#34d399; display:block; width:100%; height:100%; line-height:36px; border-radius:50%; }
+  .no { background: #fff0f0; border:1px solid #f0b7b7; }
+  .no input:checked + span { background:#f87171; display:block; width:100%; height:100%; line-height:36px; border-radius:50%; }
+  .legend { margin: 12px 0; font-size:14px; }
+  .controls { margin-top:14px; display:flex; gap:8px; justify-content:flex-end; flex-wrap: wrap; }
+  button { padding:8px 12px; border-radius:8px; border: none; cursor:pointer; background:#3b82f6; color:white; }
+  button.share { background:#10b981; }
+  button.discord { background:#5865F2; }
+  @media (max-width:600px){ th, td{ font-size:14px; padding:10px 6px; } .radio-group{font-size:20px; gap:10px;} }
+</style>
+</head>
+<body>
+<h1>جدول أحداث الميناء والجيش</h1>
+<p class="legend">اضغط على ✔ إذا ذهبت، وعلى ✘ إذا لم تذهب. الاختيار محفوظ محلياً في المتصفح.</p>
+
+<table id="eventsTable">
+  <thead>
+    <tr>
+      <th>هل ذهبت؟</th>
+      <th>الحدث</th>
+      <th>الوقت</th>
+    </tr>
+  </thead>
+  <tbody>
+"""
+
+<!-- هنا سنضع كل الصفوف -->
+<script>
+const events = [
+  ["الجيش","10:00"], ["الميناء","11:00"], ["الجيش","12:00"], ["الميناء","1:00"],
+  ["الجيش","2:00"], ["الميناء","3:00"], ["الجيش","4:00"], ["الميناء","5:00"],
+  ["الجيش","6:00"], ["الميناء","7:00"], ["الجيش","8:00"], ["الميناء","9:00"]
+];
+
+const tbody = document.querySelector('#eventsTable tbody');
+events.forEach((ev, idx)=>{
+  const tr = document.createElement('tr');
+  tr.setAttribute('data-id','row'+(idx+1));
+  tr.innerHTML = `<td>
+      <div class="radio-group">
+        <label class="btn yes"><input type="radio" name="r${idx+1}" value="yes"><span>✔</span></label>
+        <label class="btn no"><input type="radio" name="r${idx+1}" value="no"><span>✘</span></label>
+      </div>
+    </td>
+    <td>${ev[0]}</td>
+    <td>${ev[1]}</td>`;
+  tbody.appendChild(tr);
+});
+</script>
+
+<div class="controls">
+  <button id="saveBtn">حفظ اختياراتي</button>
+  <button id="clearBtn" style="background:#ef4444;">مسح الاختيارات</button>
+  <button id="shareBtn" class="share">مشاركة عامة</button>
+  <button id="discordBtn" class="discord">مشاركة في Discord</button>
+</div>
+
+<script>
+// حفظ واسترجاع الاختيارات
+function saveSelections() {
+  const rows = document.querySelectorAll('#eventsTable tbody tr');
+  const data = {};
+  rows.forEach((tr, idx)=>{
+    const id = tr.getAttribute('data-id');
+    const checked = tr.querySelector('input[type="radio"]:checked');
+    data[id] = checked ? checked.value : '';
+  });
+  localStorage.setItem('eventsSelections', JSON.stringify(data));
+  alert('تم حفظ اختياراتك محلياً في المتصفح.');
+}
+
+function loadSelections() {
+  const stored = localStorage.getItem('eventsSelections');
+  if(!stored) return;
+  const data = JSON.parse(stored);
+  const rows = document.querySelectorAll('#eventsTable tbody tr');
+  rows.forEach((tr)=>{
+    const id = tr.getAttribute('data-id');
+    const value = data[id];
+    if(!value) return;
+    const radio = tr.querySelector('input[type="radio"][value="'+value+'"]');
+    if(radio) radio.checked = true;
+  });
+}
+
+document.getElementById('saveBtn').addEventListener('click', saveSelections);
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(confirm('هل تريد مسح جميع الاختيارات؟')){
+    localStorage.removeItem('eventsSelections');
+    document.querySelectorAll('input[type="radio"]').forEach(r=>r.checked=false);
+  }
+});
+
+// زر مشاركة عام
+document.getElementById('shareBtn').addEventListener('click', ()=>{
+  if(navigator.share){
+    navigator.share({title:'جدول أحداث الميناء والجيش', url:location.href})
+      .catch(err=>alert('فشل المشاركة: '+err));
+  } else {
+    navigator.clipboard.writeText(location.href)
+      .then(()=>alert('تم نسخ الرابط!'))
+      .catch(()=>alert('نسخ الرابط فشل'));
+  }
+});
+
+// زر مشاركة Discord
+document.getElementById('discordBtn').addEventListener('click', ()=>{
+  const message = "📌 جدول أحداث الميناء والجيش: " + location.href;
+  navigator.clipboard.writeText(message)
+    .then(()=>alert('تم نسخ الرابط مع الرسالة! الصقه في أي دردشة Discord.'))
+    .catch(()=>alert('فشل نسخ الرابط'));
+});
+
+loadSelections();
+</script>
+
+</body>
+</html>
